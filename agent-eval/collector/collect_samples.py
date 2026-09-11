@@ -30,8 +30,19 @@ P0_REPEAT = int(os.getenv("AGENT_REPEAT", "3"))
 DRY_RUN_IDS = ("AG-0003", "AG-0201", "AG-0301")
 
 
-def ask_dify_stream(question: str) -> dict:
-    """流式调 Agent：拼接 agent_message 增量为完整交付；每步只留最后一条 agent_thought（干净轨迹）。"""
+def _heartbeat(start: float, step: int, tool: str, q_len: int):
+    """流式期间的心跳：每收到一个事件就刷新一行，让用户知道 Agent 还在干活"""
+    elapsed = round(time.time() - start, 0)
+    tool_info = f"工具:{tool}" if tool else "思考中"
+    print(f"\r    ⏱ {elapsed:>3.0f}s │ 轨迹第 {step} 步 │ {tool_info} │ 事件 {q_len} 条    ",
+          file=sys.stderr, end="", flush=True)
+
+
+def ask_dify_stream(question: str, show_progress: bool = True) -> dict:
+    """流式调 Agent：拼接 agent_message 增量为完整交付；每步只留最后一条 agent_thought（干净轨迹）。
+
+    show_progress=True 时，往 stderr 写实时心跳（pytest 不吞 stderr，终端能看到）。
+    """
     payload = {
         "inputs": {},
         "query": question,
@@ -46,6 +57,8 @@ def ask_dify_stream(question: str) -> dict:
     answer, final_answer = "", ""
     usage, retriever = {}, []
     last_thought = {}    # position -> 该步最后一条 thought（干净轨迹）
+    event_count = 0
+    _last_beat = 0
     start = time.time()
 
     with requests.post(API_URL, headers=headers, json=payload,
@@ -58,7 +71,14 @@ def ask_dify_stream(question: str) -> dict:
                 d = json.loads(raw[5:].strip())
             except json.JSONDecodeError:
                 continue
+            event_count += 1
             ev = d.get("event")
+
+            # 心跳：每收到 500 个事件或过了 5 秒刷一次，让用户看到进度
+            if show_progress and (event_count % 500 == 0 or time.time() - _last_beat > 5):
+                _heartbeat(start, len(last_thought), d.get("tool", ""), event_count)
+                _last_beat = time.time()
+
             if ev == "agent_message":
                 answer += d.get("answer", "")
             elif ev == "message":
@@ -76,6 +96,9 @@ def ask_dify_stream(question: str) -> dict:
 
     trajectory = [last_thought[p] for p in sorted(last_thought)]
     latency = round(time.time() - start, 1)
+    if show_progress:
+        print(f"\r    ✓ 完成：{latency}s / {len(trajectory)} 步 / {usage.get('total_tokens', '?')} tok"
+              + " " * 30, file=sys.stderr, flush=True)
     return {
         "response": final_answer or answer,
         "latency": latency,
