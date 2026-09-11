@@ -16,15 +16,12 @@ import tempfile
 import time
 from pathlib import Path
 
-# 把项目根目录（agent-eval/）加入 sys.path，让兄弟目录的模块可导入
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
 import pytest
 from deepeval import assert_test
 from deepeval.test_case import LLMTestCase
 from deepeval.metrics import TaskCompletionMetric
 
+# collector / verifier 的导入靠项目根目录的 conftest.py（pytest 自动加路径）
 from collector.collect_samples import ask_dify_stream
 from verifier.verify_code import verify_one
 
