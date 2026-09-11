@@ -25,7 +25,7 @@ from deepeval.metrics import TaskCompletionMetric
 from collector.collect_samples import ask_dify_stream
 from verifier.verify_code import verify_one
 
-DATASET = PROJECT_ROOT / "dataset" / "dataset.csv"
+DATASET = Path(__file__).resolve().parent.parent / "dataset" / "dataset.csv"
 TASKS = list(csv.DictReader(open(DATASET, encoding="utf-8-sig")))
 
 # 三块结构正则（容错：## 代码 / ## 1、代码 / ## 1. 代码 都算命中——实测模型会加编号）
