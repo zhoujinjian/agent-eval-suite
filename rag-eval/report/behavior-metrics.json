@@ -1,0 +1,9 @@
+{
+  "sample_file": "/Users/zhoujinjian/ai_project/rag-eval/collector/samples.json",
+  "queries": 20,
+  "latency_avg_s": 16.28,
+  "latency_p95_s": 26.92,
+  "latency_max_s": 34.57,
+  "tokens_avg": 1383,
+  "tokens_total": 27668
+}

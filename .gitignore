@@ -1,0 +1,26 @@
+# ===== 凭证与环境文件（密钥一律走环境变量，绝不入库）=====
+*.env
+.env
+.env.*
+
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+
+# ===== 虚拟环境（一个框架一个环境，本地自建，不入库）=====
+ragas-env/
+.venv/
+venv/
+
+# ===== Node / Promptfoo =====
+node_modules/
+.promptfoo/
+output.json
+
+# ===== macOS =====
+.DS_Store
+
+# ===== IDE =====
+.idea/
+.vscode/

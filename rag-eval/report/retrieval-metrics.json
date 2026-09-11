@@ -1,0 +1,32 @@
+{
+  "sample_file": "/Users/zhoujinjian/ai_project/rag-eval/collector/samples.json",
+  "in_lib_total": 12,
+  "hit_at_5": 0.8333,
+  "mrr": 0.6042,
+  "missed_ids": [
+    "EC-0005",
+    "EC-0101"
+  ],
+  "refusal_total": 3,
+  "wrong_recall_total": 2,
+  "wrong_recall_detail": [
+    {
+      "id": "EC-0202",
+      "retrieved_docs": [
+        "提测规范.docx",
+        "测试流程总纲.docx"
+      ],
+      "top_score": 0.6119084756506886
+    },
+    {
+      "id": "EC-0203",
+      "retrieved_docs": [
+        "发布流程.docx",
+        "提测规范.docx",
+        "发布流程.docx",
+        "测试流程总纲.docx"
+      ],
+      "top_score": 0.6002379218726731
+    }
+  ]
+}

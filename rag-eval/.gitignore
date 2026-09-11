@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+
+# 虚拟环境（ragas-env 自建的不入库，用 09 篇的兄弟目录环境也行）
+ragas-env/
+.venv/
+
+# macOS
+.DS_Store
+
+# 本地凭证（如有）
+*.env
