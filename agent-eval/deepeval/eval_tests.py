@@ -11,8 +11,13 @@
 import csv
 import re
 import shutil
+import sys
 import tempfile
 from pathlib import Path
+
+# 把项目根目录（agent-eval/）加入 sys.path，让兄弟目录的模块可导入
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 import pytest
 from deepeval import assert_test
