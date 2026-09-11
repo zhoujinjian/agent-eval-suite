@@ -7,7 +7,7 @@
 | 子目录 | 被测对象 | 配套教程 | 状态 |
 | --- | --- | --- | --- |
 | [rag-eval/](./rag-eval) | Dify「测试规范问答助手」（本地私有化 + 知识库，RAG 应用） | 第 12 篇《RAG 项目评测实战》 | ✅ v0.1 基线已产出 |
-| agent-eval/ | Agent 应用（任务级用例、mock 工具环境、轨迹评分） | 第 13 篇（规划中） | 🚧 敬请期待 |
+| [agent-eval/](./agent-eval) | Dify「AI Coding 提效工具生成 Agent」（沙盒型 Agent 应用） | 第 13 篇《Agent 项目评测实战》 | ✅ v0.1 已产出 |
 
 ## 快速开始
 
