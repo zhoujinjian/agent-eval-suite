@@ -21,6 +21,8 @@ from pathlib import Path
 
 import requests
 
+from collector.mock_responses import MOCK_RESPONSES
+
 BASE_URL = os.getenv("DIFY_BASE_URL", "http://127.0.0.1").rstrip("/")
 API_URL = f"{BASE_URL}/v1/chat-messages"
 DATASET = Path(__file__).resolve().parent.parent / "dataset" / "dataset.csv"
@@ -135,6 +137,10 @@ def main():
         rows = [r for r in rows if r["编号"] in DRY_RUN_IDS]
         print(f"[dry-run] 只跑 {len(rows)} 条冒烟")
 
+    MOCK = "--mock" in sys.argv
+    if MOCK:
+        print("[mock] 使用 Mock 模式：不调 Agent，读预置响应，零 token 消耗")
+
     use_repeat = "--repeat" in sys.argv
     samples = []
     for r in rows:
@@ -143,7 +149,16 @@ def main():
             rid = run_id(r["编号"], i)
             print(f"[{rid}] {r['任务输入'][:50]}…")
             try:
-                out = ask_dify_stream(r["任务输入"])
+                if MOCK:
+                    mock = MOCK_RESPONSES.get(rid) or MOCK_RESPONSES.get(r["编号"], {})
+                    out = {"response": mock.get("response", ""),
+                           "latency": mock.get("latency", 0),
+                           "tokens": mock.get("tokens", 0),
+                           "price": mock.get("price", 0),
+                           "trajectory": mock.get("trajectory", []),
+                           "retriever": mock.get("retriever", [])}
+                else:
+                    out = ask_dify_stream(r["任务输入"])
             except Exception as e:
                 print(f"    采集失败：{e}")
                 continue
@@ -164,7 +179,8 @@ def main():
             stats = out["trajectory"] and trajectory_stats(out["trajectory"])
             print(f"    时延 {out['latency']}s | token {out['tokens']} | "
                   f"价格 {out['price']} | 轨迹 {len(out['trajectory'])} 步")
-            time.sleep(2)    # Agent 任务重，给 worker 留口气
+            if not MOCK:
+                time.sleep(2)    # Agent 任务重，给 worker 留口气（Mock 模式不用等）
 
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(samples, f, ensure_ascii=False, indent=2)

@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 """DeepEval 主程序（教程第 13 篇 4.2 节）：三层判定组装。
 
-运行：deepeval test run eval_tests.py             # 全部 10 个任务
-      deepeval test run eval_tests.py -k AG-0003  # 只跑单条（冒烟、复判）
+运行：
+    EVAL_MOCK=1 deepeval test run eval_tests.py   # Mock 模式（教程推荐，≈¥0.2 / 2分钟）
+    deepeval test run eval_tests.py -k AG-0003    # 真实跑单条（冒烟体验，≈¥8.5 / 5分钟）
+    deepeval test run eval_tests.py               # 全量真实（生产用，≈¥85 / 50~100分钟）
 
 前置：
     export DIFY_API_KEY=app-你的密钥    # 被测 Agent
     export ZAI_API_KEY=你的智谱Key      # TaskCompletion 裁判
 """
 import csv
+import os
 import re
 import shutil
 import sys
@@ -23,7 +26,11 @@ from deepeval.metrics import TaskCompletionMetric
 
 # collector / verifier 的导入靠项目根目录的 conftest.py（pytest 自动加路径）
 from collector.collect_samples import ask_dify_stream
+from collector.mock_responses import MOCK_RESPONSES
 from verifier.verify_code import verify_one
+
+# Mock 模式：不调 Agent，用预置响应（教程阶段省 token 省时间，详见 4.2 节）
+MOCK_MODE = os.environ.get("EVAL_MOCK", "") == "1"
 
 DATASET = Path(__file__).resolve().parent.parent / "dataset" / "dataset.csv"
 TASKS = list(csv.DictReader(open(DATASET, encoding="utf-8-sig")))
@@ -54,13 +61,19 @@ def progress(msg: str):
 @pytest.mark.parametrize("task", TASKS, ids=[t["编号"] for t in TASKS])
 def test_agent_task(task):
     tid = task["编号"]
-    task_input = task["任务输入"][:40]
-    progress(f"▶ {tid} 调用 Agent 中…（单任务约 1~2 分钟，请耐心等待）")
+    progress(f"▶ {tid} {'[Mock]' if MOCK_MODE else ''}调用 Agent 中…")
 
     t0 = time.time()
 
-    # ---- 第一层：结构断言（pytest 原生 assert，零成本）----
-    sample = ask_dify_stream(task["任务输入"])
+    # ---- 取交付：Mock 模式读预置响应，真实模式调 Agent ----
+    if MOCK_MODE:
+        mock = MOCK_RESPONSES.get(tid, {})
+        sample = {"response": mock.get("response", ""),
+                  "latency": mock.get("latency", 0),
+                  "tokens": mock.get("tokens", 0),
+                  "trajectory": mock.get("trajectory", [])}
+    else:
+        sample = ask_dify_stream(task["任务输入"])
     delivery = sample["response"]
 
     elapsed = round(time.time() - t0, 0)
