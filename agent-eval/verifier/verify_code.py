@@ -41,7 +41,7 @@ def verify_one(sample: dict, task: dict, workdir: Path) -> dict:
         lang, src = l, code
         break
     if not src:
-        return {"id": sample["id"], "level": task.get("验证级", ""), "pass": False,
+        return {"id": sample.get("id", task.get("编号", "?")), "level": task.get("验证级", ""), "pass": False,
                 "reason": "未找到「## 代码」代码块"}
 
     suffix = ".py" if lang in ("python", "py") else ".sh"
@@ -53,10 +53,10 @@ def verify_one(sample: dict, task: dict, workdir: Path) -> dict:
               else ["bash", "-n", str(code_file)])
     r1 = subprocess.run(l1_cmd, capture_output=True, text=True, timeout=30)
     if r1.returncode != 0:
-        return {"id": sample["id"], "level": task.get("验证级", ""), "pass": False,
+        return {"id": sample.get("id", task.get("编号", "?")), "level": task.get("验证级", ""), "pass": False,
                 "reason": f"L1 语法失败：{r1.stderr[:200]}"}
     if task.get("验证级") in ("L1", "不执行", ""):
-        return {"id": sample["id"], "level": "L1", "pass": True, "reason": "语法级通过"}
+        return {"id": sample.get("id", task.get("编号", "?")), "level": "L1", "pass": True, "reason": "语法级通过"}
 
     # ---- L2/L3 试运行与输出断言 ----
     cmd = (task.get("验证命令", "")
@@ -64,7 +64,7 @@ def verify_one(sample: dict, task: dict, workdir: Path) -> dict:
            .replace("{code_file}", str(code_file)))
     r2 = subprocess.run(cmd, shell=True, cwd=workdir, capture_output=True,
                         text=True, timeout=300)
-    result = {"id": sample["id"], "level": task.get("验证级", ""),
+    result = {"id": sample.get("id", task.get("编号", "?")), "level": task.get("验证级", ""),
               "exit_code": r2.returncode, "stdout": r2.stdout[:500]}
     if r2.returncode != 0:
         result.update({"pass": False, "reason": f"运行失败：{r2.stderr[:200]}"})
