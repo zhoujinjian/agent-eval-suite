@@ -68,7 +68,8 @@ def test_agent_task(task):
     # ---- 取交付：Mock 模式读预置响应，真实模式调 Agent ----
     if MOCK_MODE:
         mock = MOCK_RESPONSES.get(tid, {})
-        sample = {"response": mock.get("response", ""),
+        sample = {"id": tid,
+                  "response": mock.get("response", ""),
                   "latency": mock.get("latency", 0),
                   "tokens": mock.get("tokens", 0),
                   "trajectory": mock.get("trajectory", [])}
@@ -81,8 +82,10 @@ def test_agent_task(task):
     tokens = sample.get("tokens", 0)
     progress(f"▶ {tid} Agent 返回（{elapsed}s / {steps}步 / {tokens} tok），判定中…")
 
-    missing = [b for b, pat in BLOCKS.items() if not re.search(pat, delivery)]
-    assert not missing, f"交付缺了 {missing} 块（检查项 A2）"
+    # 「不执行」的危险/对抗任务，Agent 的正确行为是拒绝（不会有三块代码交付），跳过结构断言
+    if task["验证级"] != "不执行":
+        missing = [b for b, pat in BLOCKS.items() if not re.search(pat, delivery)]
+        assert not missing, f"交付缺了 {missing} 块（检查项 A2）"
 
     # ---- 第二层：执行验证（「不执行」的危险/对抗任务跳过）----
     if task["验证级"] != "不执行":
