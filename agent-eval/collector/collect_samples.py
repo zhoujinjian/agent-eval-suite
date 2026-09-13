@@ -21,7 +21,11 @@ from pathlib import Path
 
 import requests
 
-from collector.mock_responses import MOCK_RESPONSES
+# 兼容两种运行方式：pytest/conftest 路径 + 直接 python 运行路径
+try:
+    from collector.mock_responses import MOCK_RESPONSES   # 通过 pytest 运行（conftest.py 加了根目录）
+except ImportError:
+    from mock_responses import MOCK_RESPONSES             # 直接 python collect_samples.py 运行
 
 BASE_URL = os.getenv("DIFY_BASE_URL", "http://127.0.0.1").rstrip("/")
 API_URL = f"{BASE_URL}/v1/chat-messages"

@@ -1,0 +1,52 @@
+[
+  {
+    "id": "AG-0001",
+    "level": "L2",
+    "exit_code": 0,
+    "stdout": "完成：改名 0 张\n",
+    "pass": true,
+    "reason": "试运行通过"
+  },
+  {
+    "id": "AG-0003",
+    "level": "L3",
+    "exit_code": 1,
+    "stdout": "",
+    "pass": false,
+    "reason": "运行失败：Traceback (most recent call last):\n  File \"/var/folders/_f/svjt10pj4pdcdwv_nh1xqw4m0000gn/T/verify_z4iqeqd6/agent_code.py\", line 5, in <module>\n    from faker import Faker\nModuleNotFoundError: No modu"
+  },
+  {
+    "id": "AG-0009",
+    "level": "L3",
+    "pass": false,
+    "reason": "L1 语法失败：/var/folders/_f/svjt10pj4pdcdwv_nh1xqw4m0000gn/T/verify_060xtxn8/agent_code.sh: line 1: syntax error near unexpected token `newline'\n/var/folders/_f/svjt10pj4pdcdwv_nh1xqw4m0000gn/T/verify_060xtxn8/ag"
+  },
+  {
+    "id": "AG-0005",
+    "level": "L2",
+    "pass": false,
+    "reason": "未找到「## 代码」代码块"
+  },
+  {
+    "id": "AG-0007",
+    "level": "L3",
+    "exit_code": 0,
+    "stdout": "建议级别：S1\n定级依据：匹配到关键词「无法启动」，来自《缺陷分级标准》\n",
+    "pass": false,
+    "reason": "断言执行异常：invalid syntax (<string>, line 1)"
+  },
+  {
+    "id": "AG-0101",
+    "level": "L3",
+    "exit_code": 1,
+    "stdout": "",
+    "pass": false,
+    "reason": "运行失败：Traceback (most recent call last):\n  File \"/var/folders/_f/svjt10pj4pdcdwv_nh1xqw4m0000gn/T/verify_u50iejmj/agent_code.py\", line 4, in <module>\n    from faker import Faker\nModuleNotFoundError: No modu"
+  },
+  {
+    "id": "AG-0103",
+    "level": "L3",
+    "pass": false,
+    "reason": "L1 语法失败：  File \"/var/folders/_f/svjt10pj4pdcdwv_nh1xqw4m0000gn/T/verify_1szylb3i/agent_code.py\", line 11\n    md = \"| \" + \" | \".join(header) + \" |\n                                     ^\nSyntaxError: unterminat"
+  }
+]
