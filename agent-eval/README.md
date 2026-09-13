@@ -6,13 +6,15 @@
 
 ```
 agent-eval/
+├── conftest.py                # pytest 自动把本目录加入 sys.path，兄弟目录模块可导入
 ├── dataset/
 │   ├── dataset.csv            # 10 个任务级用例（含期望调用/验证级/验证命令/验证断言列）
 │   └── backlog.csv            # 候补池：首轮因成本裁掉的任务（含裁掉理由）
 ├── deepeval/
 │   └── eval_tests.py          # DeepEval 主程序：三层判定组装（结构+执行+语义）
 ├── collector/
-│   ├── collect_samples.py     # 流式调 Agent：拼接交付、采 usage 与干净轨迹
+│   ├── collect_samples.py     # 流式调 Agent：拼接交付、采 usage 与干净轨迹（支持 --mock）
+│   ├── mock_responses.py      # Mock 数据：10 条预置 Agent 响应（7 过 + 3 种失败）
 │   └── behavior_metrics.py    # 任务耗时 P95、token 与成本
 ├── verifier/
 │   ├── verify_code.py         # 执行验证：提取代码 → 本地跑 → L1/L2/L3 断言
@@ -20,8 +22,29 @@ agent-eval/
 │   └── checks.py              # 独立核对函数（身份证校验位等）
 ├── ragas/                     # 空——检索质量不并入主链（README 写明原因）
 └── report/
-    └── eval-report-v0.1.md    # 一页纸评测报告
+    └── eval-report-v0.1.md    # 第一版评测报告（Mock 数据版）
 ```
+
+## Mock 模式 vs 真实模式
+
+Agent 评测每跑一条任务都是真实 API 调用——单条 5~10 分钟、5 万 token、约 ¥8.5。全量 10 条一轮要 50~100 分钟、¥85。**教程学习阶段用 Mock 模式，省时省钱**。
+
+| | Mock 模式 | 真实模式 |
+| --- | --- | --- |
+| **Agent 响应** | 预置数据（mock_responses.py） | 真实调 Dify Agent API |
+| **裁判评分** | ✅ 真实（调智谱 glm-5.3） | ✅ 真实 |
+| **执行验证** | ✅ 真实（本地跑交付代码） | ✅ 真实 |
+| **耗时** | ~2 分钟 | 50~100 分钟 |
+| **成本** | ~¥0.2（只有裁判费） | ~¥85 |
+| **适用场景** | 学习评测方法、验证链路、看报告长什么样 | 出真实基线数据 |
+
+**Mock 数据里故意混了 3 条失败的**（不是全过），让你看到三种失败模式长什么样：
+
+| 失败类型 | Mock ID | 你能看到什么 |
+| --- | --- | --- |
+| 缺「使用说明」块 | AG-0001#FAIL_STRUCT | 结构断言怎么抓住缺块 |
+| 代码有语法错误 | AG-0003#FAIL_EXEC | 执行验证器怎么发现跑不通 |
+| 代码能跑但方案蠢 | AG-0103#FAIL_SEMANTIC | 裁判怎么判「技术上对但业务上错」 |
 
 ## 环境准备
 
@@ -38,44 +61,51 @@ playwright install chromium
 ### 2. 配凭证（写入 ~/.zshrc）
 
 ```bash
-export DIFY_API_KEY="app-你的Agent应用密钥"
-export ZAI_API_KEY="你的智谱Key"
+export DIFY_API_KEY="app-你的Agent应用密钥"    # 真实模式需要，Mock 模式可跳过
+export ZAI_API_KEY="你的智谱Key"              # 裁判模型用，两种模式都需要
 ```
 
 ## 运行步骤
 
-### 第 0 步：冒烟
+### 方式一：Mock 模式（推荐先用这个）
 
 ```bash
+# 1. 采集（Mock，秒出）
 cd collector
-python collect_samples.py --dry-run    # 只跑 3 条（AG-0003 / AG-0201 / AG-0301）
-```
+python collect_samples.py --mock
 
-### 第 1 步：全量采集
-
-```bash
-python collect_samples.py              # 10 个任务，约 10~20 分钟
-python behavior_metrics.py             # 耗时 P95、token、成本
-```
-
-### 第 2 步：执行验证
-
-```bash
+# 2. 执行验证（本地跑交付代码，免费）
 cd ../verifier
-python verify_code.py                  # L1/L2/L3 执行验证
+python verify_code.py
+
+# 3. 行为类指标
+cd ../collector
+python behavior_metrics.py
+
+# 4. DeepEval 三层判定（裁判费约 ¥0.2）
+cd ..
+EVAL_MOCK=1 deepeval test run deepeval/eval_tests.py
+
+# 5. 看报告
+cat report/eval-report-v0.1.md
 ```
 
-### 第 3 步：DeepEval 三层判定
+### 方式二：真实模式（出实际基线用）
 
 ```bash
-cd ../deepeval
-deepeval test run eval_tests.py -k AG-0003   # 先冒烟 1 条
-deepeval test run eval_tests.py              # 全量 10 条
+# 0. 冒烟（只跑 1 条，确认链路通）
+EVAL_MOCK=1 deepeval test run deepeval/eval_tests.py -k AG-0003
+
+# 1. 全量采集（10 条，约 50~100 分钟，¥85）
+cd collector
+python collect_samples.py
+
+# 2. 执行验证 + 行为指标 + DeepEval
+cd ../verifier && python verify_code.py
+cd ../collector && python behavior_metrics.py
+cd ..
+deepeval test run deepeval/eval_tests.py
 ```
-
-### 第 4 步：填报告
-
-对照 `report/eval-report-v0.1.md`，按四路来源填数。
 
 ## 测评集说明
 
