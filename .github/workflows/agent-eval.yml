@@ -1,0 +1,59 @@
+# Agent 评测门禁（13 篇 agent-eval 项目）
+# 触发条件：有人提 PR 到 main，或直接 push 到 main
+# 使用 Mock 模式：不调 Dify（无本地服务依赖），只调裁判（智谱 API 公网可达）
+# 前提：在仓库 Settings → Secrets → Actions 里配好 ZAI_API_KEY
+
+name: Agent 评测门禁（Mock 模式）
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      # 第一步：拉代码
+      - uses: actions/checkout@v4
+
+      # 第二步：装 Python 3.11（DeepEval 是 Python 库）
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # 第三步：安装依赖（DeepEval + requests）
+      - name: 安装依赖
+        run: |
+          cd agent-eval
+          pip install deepeval requests
+
+      # 第四步：跑 DeepEval 三层判定（Mock 模式，约 2 分钟 / ¥0.2）
+      # EVAL_MOCK=1 让评测读预置数据，不调 Dify，只调智谱裁判
+      - name: 跑 DeepEval 三层判定（Mock 模式）
+        env:
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          EVAL_MOCK: '1'
+        run: |
+          cd agent-eval
+          deepeval test run deepeval/eval_tests.py
+
+      # 第五步：提示信息（可选）
+      - name: 评测结果
+        run: echo "DeepEval Mock 模式评测完成"
+
+# ============================================================
+# 如需在 CI 里跑真实模式（Agent 真的干活），需要解决本地服务穿透问题。
+# 参见教程第 14 篇 2.3 节的四种方案（ngrok / Cloudflare Tunnel / 自托管 Runner）。
+# 以下为真实模式的参考配置（需把 DIFY_BASE_URL 换成你的穿透地址）：
+#
+#      - name: 跑 DeepEval 真实模式
+#        env:
+#          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+#          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+#          DIFY_BASE_URL: https://你的穿透地址   # ngrok 或 Cloudflare Tunnel 生成的公网 URL
+#        run: |
+#          cd agent-eval
+#          deepeval test run deepeval/eval_tests.py -k AG-0003  # 先跑 1 条冒烟
+# ============================================================

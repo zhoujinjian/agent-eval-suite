@@ -1,0 +1,40 @@
+# RAG 评测门禁（12 篇 rag-eval 项目）
+# 触发条件：有人提 PR 到 main，或直接 push 到 main
+# 前提：在仓库 Settings → Secrets → Actions 里配好 DIFY_API_KEY 和 ZAI_API_KEY
+
+name: RAG 评测门禁
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      # 第一步：拉代码
+      - uses: actions/checkout@v4
+
+      # 第二步：装 Node.js（Promptfoo 是 Node 工具）
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 第三步：安装 Promptfoo
+      - name: 安装 Promptfoo
+        run: npm install -g promptfoo
+
+      # 第四步：跑 Promptfoo 断言评测（12 篇 4.2 节的配置）
+      - name: 跑 Promptfoo 断言评测
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+        run: |
+          cd rag-eval/promptfoo
+          npx promptfoo@latest eval -c promptfooconfig.yaml
+
+      # 第五步：提示信息（可选）
+      - name: 评测结果
+        run: echo "Promptfoo 评测完成，详细报告见上方输出"
