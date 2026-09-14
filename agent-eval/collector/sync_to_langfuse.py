@@ -26,7 +26,8 @@
     - span 列表：Agent 轨迹的每一步（工具名、入参、执行结果）
     - output：最终交付
     - metadata：耗时、token、成本
-    - score：评测分数（如果 samples.json 里有评分数据）
+    - score：评测分数 task_completion（读 report/eval-scores.json，
+      由 deepeval/eval_tests.py 跑完评测后落盘，含裁判分数与理由）
 
 依赖：pip install langfuse
 """
@@ -46,8 +47,12 @@ def check_env():
         sys.exit(1)
 
 
-def sync_sample(langfuse, sample: dict) -> str:
-    """把一条样本同步到 Langfuse，返回 trace ID"""
+def sync_sample(langfuse, sample: dict, sc: dict = None) -> str:
+    """把一条样本同步到 Langfuse，返回 trace ID
+
+    sc 是该任务的评测结果（来自 report/eval-scores.json，跑过 deepeval 才有）：
+    {"passed": bool, "score": 0~1 或 None, "reason": "..."}
+    """
     # 创建根观测（Langfuse SDK v3+ 没有 trace() 方法，根观测就是一条 trace）
     root = langfuse.start_observation(
         name=f"agent_task_{sample['id']}",
@@ -76,8 +81,19 @@ def sync_sample(langfuse, sample: dict) -> str:
     # 最终交付作为 trace 的 output
     root.update(output=str(sample.get("response", ""))[:2000])
 
-    # 如果有评测分数（DeepEval 跑完后补的），也挂上
-    if sample.get("eval_score") is not None:
+    # 挂评测分数：优先用 DeepEval 落盘的分数（report/eval-scores.json），
+    # 兼容手工补在样本里的 eval_score 字段
+    if sc:
+        value = sc.get("score")
+        if value is None:  # 前两层就挂掉的没有裁判分，用 0/1 表示通过与否
+            value = 1 if sc.get("passed") else 0
+        root.score_trace(
+            name="task_completion",
+            value=value,
+            comment=str(sc.get("reason", ""))[:500],
+            data_type="NUMERIC",
+        )
+    elif sample.get("eval_score") is not None:
         root.score_trace(
             name="task_completion",
             value=sample["eval_score"],
@@ -109,12 +125,21 @@ def main():
         print("❌ samples.json 是空的")
         sys.exit(1)
 
+    # 读评测分数：跑过 deepeval 才有（report/eval-scores.json），没有就只同步轨迹
+    scores_path = Path(__file__).resolve().parent.parent / "report" / "eval-scores.json"
+    scores = json.loads(scores_path.read_text(encoding="utf-8")) if scores_path.exists() else {}
+    if scores:
+        print(f"  已加载 {len(scores)} 条评测分数（report/eval-scores.json）")
+    else:
+        print("  ⚠ 未找到 report/eval-scores.json，本次只同步轨迹不带分数")
+        print("    想带分数：先跑一轮 EVAL_MOCK=1 deepeval test run deepeval/eval_tests.py")
+
     # 逐条同步
     print(f"开始同步 {len(samples)} 条到 Langfuse…")
     trace_ids = []
     for sample in samples:
         try:
-            tid = sync_sample(langfuse, sample)
+            tid = sync_sample(langfuse, sample, scores.get(sample.get("id")))
             trace_ids.append(tid)
             print(f"  ✓ {sample['id']} → trace: {tid[:16]}…")
         except Exception as e:

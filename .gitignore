@@ -18,6 +18,9 @@ node_modules/
 .promptfoo/
 output.json
 
+# ===== DeepEval 运行缓存 =====
+.deepeval/
+
 # ===== macOS =====
 .DS_Store
 
