@@ -17,7 +17,7 @@
     2. 环境变量已配好（11 篇 2.3 节）：
        export LANGFUSE_PUBLIC_KEY=pk-lf-xxxx
        export LANGFUSE_SECRET_KEY=sk-lf-xxxx
-       export LANGFUSE_HOST=http://127.0.0.1:3000
+       export LANGFUSE_BASE_URL=http://127.0.0.1:3000
 
 验证：
     同步完成后打开 Langfuse → Traces
@@ -38,7 +38,7 @@ from pathlib import Path
 
 def check_env():
     """检查 Langfuse 环境变量"""
-    required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST"]
+    required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"]
     missing = [v for v in required if not os.getenv(v)]
     if missing:
         print(f"❌ 缺少环境变量: {', '.join(missing)}")
@@ -120,7 +120,7 @@ def main():
 
     print(f"\n{'='*50}")
     print(f"✓ 同步完成: {len(trace_ids)}/{len(samples)} 条成功")
-    host = os.getenv("LANGFUSE_HOST", "http://127.0.0.1:3000")
+    host = os.getenv("LANGFUSE_BASE_URL", "http://127.0.0.1:3000")
     print(f"  打开 {host} → Traces 查看")
     print(f"  每个 trace 包含: input → span 列表（轨迹每一步）→ output → metadata")
 

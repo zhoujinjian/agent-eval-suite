@@ -15,7 +15,7 @@
     2. 环境变量已配好（11 篇 2.3 节）：
        export LANGFUSE_PUBLIC_KEY=pk-lf-xxxx
        export LANGFUSE_SECRET_KEY=sk-lf-xxxx
-       export LANGFUSE_HOST=http://127.0.0.1:3000
+       export LANGFUSE_BASE_URL=http://127.0.0.1:3000
 
 验证：
     同步完成后打开 Langfuse 界面 → Traces 页签
@@ -43,7 +43,7 @@ def main():
 
     # 检查 Langfuse 环境变量
     import os
-    required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_HOST"]
+    required = ["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"]
     missing = [v for v in required if not os.getenv(v)]
     if missing:
         print(f"❌ 缺少环境变量: {', '.join(missing)}")
@@ -86,7 +86,7 @@ def main():
         synced += 1
 
     print(f"✓ 已同步 {synced} 条到 Langfuse")
-    print(f"  打开 {os.getenv('LANGFUSE_HOST', 'http://127.0.0.1:3000')} → Traces 查看")
+    print(f"  打开 {os.getenv('LANGFUSE_BASE_URL', 'http://127.0.0.1:3000')} → Traces 查看")
 
 
 if __name__ == "__main__":
