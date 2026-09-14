@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 第一步：拉代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 第二步：装 Python 3.11（DeepEval 是 Python 库）
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 

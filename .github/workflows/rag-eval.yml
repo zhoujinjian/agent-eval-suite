@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 第一步：拉代码
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 第二步：装 Node.js（Promptfoo 是 Node 工具）
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       # 第三步：安装 Promptfoo
       - name: 安装 Promptfoo
