@@ -55,7 +55,14 @@ def main():
 
     # 读 Promptfoo 结果
     data = json.loads(results_file.read_text(encoding="utf-8"))
+
+    # 注意：新版 Promptfoo 导出的 JSON 是双层嵌套
+    # {"evalId": ..., "results": {"version": 3, ..., "results": [逐条结果]}}
+    # 老版本是单层 {"results": [逐条结果]}，两种格式都兼容
     results = data.get("results", [])
+    if isinstance(results, dict):
+        results = results.get("results", [])
+    results = [r for r in results if isinstance(r, dict)]
 
     if not results:
         print("❌ results.json 里没有评测结果")
@@ -65,25 +72,37 @@ def main():
     # 逐条同步
     synced = 0
     for r in results:
-        question = str(r.get("vars", {}).get("question", "未知问题"))
+        question = str((r.get("vars") or {}).get("question", "未知问题"))
         passed = r.get("success", False)
-        response = str(r.get("response", ""))[:2000]  # 截断防超长
 
-        # 创建 trace
-        trace = langfuse.trace(
+        # response 是对象（raw/output/tokenUsage...），回答正文在 output 字段
+        resp = r.get("response") or {}
+        if isinstance(resp, dict):
+            output = resp.get("output") or resp.get("raw") or ""
+        else:
+            output = resp
+        response = str(output)[:2000]  # 截断防超长
+
+        # Langfuse SDK v3+ 移除了 trace() 方法，改用 start_observation 建根观测
+        # （根观测在 Langfuse 里就是一条 trace）
+        span = langfuse.start_observation(
             name=f"rag_eval_{question[:30]}",
             input={"question": question},
             output={"response": response, "passed": passed},
         )
 
-        # 挂分数
-        trace.score(
+        # 给这条 trace 挂分数
+        span.score_trace(
             name="assertion_pass",
             value=1 if passed else 0,
             comment=f"Promptfoo 断言{'通过' if passed else '失败'}",
             data_type="NUMERIC",
         )
+        span.end()
         synced += 1
+
+    # SDK 是异步批量上报，退出前必须 flush，否则进程退出数据就丢了
+    langfuse.flush()
 
     print(f"✓ 已同步 {synced} 条到 Langfuse")
     print(f"  打开 {os.getenv('LANGFUSE_BASE_URL', 'http://127.0.0.1:3000')} → Traces 查看")

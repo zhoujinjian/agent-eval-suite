@@ -48,8 +48,8 @@ def check_env():
 
 def sync_sample(langfuse, sample: dict) -> str:
     """把一条样本同步到 Langfuse，返回 trace ID"""
-    # 创建 trace（一条 trace 对应一个评测任务）
-    trace = langfuse.trace(
+    # 创建根观测（Langfuse SDK v3+ 没有 trace() 方法，根观测就是一条 trace）
+    root = langfuse.start_observation(
         name=f"agent_task_{sample['id']}",
         input={"question": sample.get("user_input", "")[:1000]},
         metadata={
@@ -62,29 +62,31 @@ def sync_sample(langfuse, sample: dict) -> str:
         },
     )
 
-    # 把轨迹的每一步变成 trace 下的 span
+    # 把轨迹的每一步变成根观测下的子观测（span）
     for i, step in enumerate(sample.get("trajectory", [])):
         tool = step.get("tool") or "thinking"
-        trace.span(
+        child = root.start_observation(
             name=f"step_{i+1}_{tool}",
             input=str(step.get("tool_input", ""))[:500],
             output=str(step.get("observation", ""))[:500],
             metadata={"tool": tool},
         )
+        child.end()
 
     # 最终交付作为 trace 的 output
-    trace.update(output=str(sample.get("response", ""))[:2000])
+    root.update(output=str(sample.get("response", ""))[:2000])
 
     # 如果有评测分数（DeepEval 跑完后补的），也挂上
     if sample.get("eval_score") is not None:
-        trace.score(
+        root.score_trace(
             name="task_completion",
             value=sample["eval_score"],
             comment=str(sample.get("eval_reason", ""))[:500],
             data_type="NUMERIC",
         )
 
-    return trace.id
+    root.end()
+    return root.trace_id
 
 
 def main():
@@ -117,6 +119,9 @@ def main():
             print(f"  ✓ {sample['id']} → trace: {tid[:16]}…")
         except Exception as e:
             print(f"  ✗ {sample['id']} 同步失败: {e}")
+
+    # SDK 是异步批量上报，退出前必须 flush，否则进程退出数据就丢了
+    langfuse.flush()
 
     print(f"\n{'='*50}")
     print(f"✓ 同步完成: {len(trace_ids)}/{len(samples)} 条成功")
